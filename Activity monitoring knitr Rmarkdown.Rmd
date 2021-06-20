@@ -1,0 +1,179 @@
+
+# Activity Monitoring Project
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, results = "asis")
+```
+
+In this project, we will analyze data from a personal activity monitoring device. 
+This device collects data at 5 minute intervals throughout the day. The data 
+consists of two months of data from an anonymous individual collected during the 
+months of October and November, 2012 and include the number of steps taken in 5 
+minute intervals each day.
+
+
+## Loading and preprocessing the data:
+
+We need to download the data and preprocess it. It appears that the dates are 
+recorded as characters. We will change their class to Dates to facilitate 
+downstream analysis.
+
+
+``` {r loading_and_processing_the_data, echo=T}
+URL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(URL, destfile = paste(getwd(), "/Data.zip", sep = ""))
+unzip("Data.zip", exdir = getwd())
+raw_data <- read.csv("activity.csv")
+preprocessed_data <- as.Date(as.character(raw_data$date, "yyyy-mm-dd"))
+preprocessed_data <- replace(raw_data, 2, preprocessed_data)
+```
+
+
+## What is mean total number of steps taken per day?
+
+The first step in analyzing our dataset is to calculate the total number of 
+steps taken each day. 
+
+``` {r calculating_the_total_number_of_steps_per_day}
+total_steps_per_day <- aggregate(steps ~ date,data = preprocessed_data, sum)
+summary(total_steps_per_day)
+```
+
+Then, we want to make a histogram of the total steps per day.
+
+``` {r histogram_of_total_steps_per_day}
+hist(total_steps_per_day$steps, breaks = 10,xlab = "Total Steps per Day",
+     main = "Histogram of Total Steps per Day")
+```
+
+Then, we will calculate the mean and median of the total number of steps per day in our dataset.
+
+``` {r calculating_the_mean_and_median}
+mean_steps <- mean(total_steps_per_day$steps)
+median_steps <- median(total_steps_per_day$steps)
+```
+
+The mean of the total number of steps taken per day is:
+``` {r}
+mean_steps
+```
+
+The median of the total number of steot taken per day is:
+
+``` {r}
+median_steps
+```
+
+In all of the above calculations, we were using the defaults of the R functions 
+we used that ignore NA values. 
+
+## What is the average daily activity pattern?
+
+In order to determine the average daily activity pattern, we need to calculate 
+the average number of steps per each day during each individual 5-minute time interval.
+
+``` {r calculating_the_average_daily_activity_pattern}
+library(ggplot2)
+average_steps <- aggregate(steps ~ interval, preprocessed_data, mean)
+ggplot(data = average_steps, aes(interval, steps)) + geom_line(color="red", 
+      size=1.5) + labs(title = "Average Daily Activity Pattern", x="Time Interval",
+                       y="Average Daily Number of Steps")
+```
+
+Now let's try to find out which time interval is the subject most active at.
+
+```{r}
+which.max(average_steps$steps)
+average_steps[104,]
+```
+
+It appears that the subject is most active around 8:35. 
+
+## Imputing Missing Values
+
+We have been ignoring NAs so far. Now we need to look closely into the NAs to 
+find out if they are significant and if they could have skewed our previous results.
+
+First, let's find out how many NAs do we have.
+
+``` {r calculating_the_total_number_of_NAs}
+sum(is.na(preprocessed_data$steps))
+```
+
+Then, we need to impute a value for every NA. I chose to impute the median of the 
+steps.
+
+``` {r imputing_the_median_for_NA_values}
+preprocessed_data$steps[which(is.na(preprocessed_data$steps))] = median(preprocessed_data$steps, na.rm = T)
+```
+
+The resulting dataset is stored as the new preprocessed_data dataset. 
+
+Now, we will calculate the total number of steps in the new dataset.
+
+``` {r calculating_the_total_number_of_steps_per_day_in_the_new_dataset}
+total_steps_per_day2 <- aggregate(steps ~ date,data = preprocessed_data, sum)
+summary(total_steps_per_day2)
+```
+
+Then, we want to make a histogram of the total steps per day in the new dataset.
+
+``` {r histogram_of_total_steps_per_day_of_the_new_dataset}
+hist(total_steps_per_day2$steps, breaks = 10,xlab = "Total Steps per Day",
+     main = "Histogram of Total Steps per Day 2")
+```
+
+Then, we will calculate the mean and median of the total number of steps per day in our  new dataset.
+
+``` {r calculating_the_mean_and_median_in_the_new_dataset}
+mean_steps <- mean(total_steps_per_day2$steps)
+median_steps <- median(total_steps_per_day2$steps)
+```
+
+The new mean of the total number of steps taken per day is:
+``` {r}
+mean_steps
+```
+
+The new median of the total number of steps taken per day is:
+
+``` {r}
+median_steps
+```
+
+We notice that the mean and median of the total number of steps in the new dataset
+went down slightly. We also notice that the new histogram hasn't changed much except
+for and increased number of 0 values. This means that our imputation replaced NAs
+with 0s for the most part. This makes sense because as we noted earlier, the subject
+was resting and not taking any steps for the majority of the time so it is safe to 
+assume that the subject made 0 steps during the NAs recorded. 
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+First, we need to create a new variable called "weekday" that determines whether
+the dates in our dataset are weekdays or weekends. 
+
+```{r differentiating_between_weekdays_and_weekends}
+weekday <- weekdays(preprocessed_data[,2])
+weekday <- gsub(pattern = "monday|tuesday|wednesday|thursday|friday", 
+                x=weekday, replacement = "weekday", ignore.case = T)
+weekday <- gsub(pattern = "saturday|sunday", x=weekday, replacement = "weekend", 
+                ignore.case = T)
+preprocessed_data$weekday <- weekday
+```
+
+Now let's try to plot the difference in activity patterns between weekdays and
+weekends using a time series plot.
+
+``` {r plotting_a_time_series_of_pattern_of_activity_on_weekdays_vs_weekends}
+average_steps2 <- aggregate(steps ~ interval+weekday, preprocessed_data, mean)
+ggplot(data= average_steps2, aes(interval, steps)) + geom_line(color= "green",
+       size=1.5) + facet_grid(rows = vars(weekday)) 
+```
+
+As you can see, there appears to be a significant difference in the pattern of 
+activity between weekdays and weekends. The subject seems to be active throughout
+the day on weekends while he/she is active mostly in the morning on weekdays. 
+
+This concludes this analysis. Thank you for your time!
+

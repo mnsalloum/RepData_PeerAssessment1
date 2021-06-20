@@ -232,19 +232,3 @@ the day on weekends while he/she is active mostly in the morning on weekdays.
 This concludes this analysis. Thank you for your time!
 
 
-
-```r
-knit2html(input = "./Activity monitoring knitr Rmarkdown.Rmd")
-```
-
-```
-## 
-## 
-## processing file: ./Activity monitoring knitr Rmarkdown.Rmd
-```
-
-```
-## Error in parse_block(g[-1], g[1], params.src, markdown_mode): Duplicate chunk label 'setup', which has been used for the chunk:
-## knitr::opts_chunk$set(echo = TRUE, results = "asis")
-```
-
